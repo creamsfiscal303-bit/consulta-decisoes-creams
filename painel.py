@@ -103,6 +103,35 @@ st.markdown("""
         padding-top: 1rem;
         margin-top: 2rem;
     }
+    
+/* Melhorar contraste dos rótulos e campos */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label,
+.stTextInput label,
+.stSelectbox label {
+    color: #153b60 !important;
+    font-weight: 600 !important;
+}
+
+/* Melhorar leitura do botão de exportação */
+div.stDownloadButton > button {
+    background-color: #153b60 !important;
+    color: #ffffff !important;
+    border: 1px solid #153b60 !important;
+}
+
+div.stDownloadButton > button:hover {
+    background-color: #1d527d !important;
+    color: #ffffff !important;
+    border-color: #c7a44b !important;
+}
+
+/* Garantir contraste dos campos de pesquisa */
+div[data-baseweb="select"] *,
+div[data-baseweb="input"] input {
+    color: #ffffff;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
