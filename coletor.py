@@ -116,11 +116,17 @@ def discover_pdf_records():
                             "url_documento": url2, "pagina_origem": url, "tipo_documento": "PDF"})
         time.sleep(0.1)
     # Additional discovery for plenary yearly pages.
-    links, _ = links_from_page(PLENARIO)
-    for label, url in links:
-        m = re.search(r"\b(20\d{2})\b", label)
-        if not m or "decis" not in label.casefold(): continue
-        year = int(m.group(1)); sublinks, _ = links_from_page(url)
+
+links, _ = links_from_page(PLENARIO)
+for label, url in links:
+    m = re.search(r"\b(20\d{2})\b", label)
+    if not m or "decis" not in label.casefold():
+        continue
+    year = int(m.group(1))
+    if year < 2025:
+        continue
+    sublinks, _ = links_from_page(url)
+
         for title, pdf_url in sublinks:
             if ".pdf" in pdf_url.lower().split("?")[0]:
                 docs.append({"ano": year, "orgao": "Plenário",
