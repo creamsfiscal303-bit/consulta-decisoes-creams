@@ -124,21 +124,38 @@ def discover_pdf_records():
         time.sleep(0.1)
     # Additional discovery for plenary yearly pages.
 
-links, _ = links_from_page(PLENARIO)
-for label, url in links:
-    m = re.search(r"\b(20\d{2})\b", label)
-    if not m or "decis" not in label.casefold():
-        continue
-    year = int(m.group(1))
-    if year < 2025:
-        continue
-    sublinks, _ = links_from_page(url)
+
+    # Busca adicional do Plenário: somente 2025 em diante
+    links, _ = links_from_page(PLENARIO)
+
+    for label, url in links:
+        m = re.search(r"\b(20\d{2})\b", label)
+
+        if not m or "decis" not in label.casefold():
+            continue
+
+        year = int(m.group(1))
+
+        if year < 2025:
+            continue
+
+        sublinks, _ = links_from_page(url)
 
         for title, pdf_url in sublinks:
-            if ".pdf" in pdf_url.lower().split("?")[0]:
-                docs.append({"ano": year, "orgao": "Plenário",
-                    "titulo_documento": title or Path(urlparse(pdf_url).path).name,
-                    "url_documento": pdf_url, "pagina_origem": url, "tipo_documento": "PDF"})
+            if ".pdf" not in pdf_url.lower().split("?")[0]:
+                continue
+
+            docs.append({
+                "ano": year,
+                "orgao": "Plenário",
+                "titulo_documento": title or Path(
+                    urlparse(pdf_url).path
+                ).name,
+                "url_documento": pdf_url,
+                "pagina_origem": url,
+                "tipo_documento": "PDF",
+            })
+
     unique = {}
     for d in docs:
         key = d["url_documento"]
