@@ -97,8 +97,15 @@ def discover_index_pages():
     return list(unique.values())
 
 
+
 def discover_pdf_records():
-    pages = discover_index_pages(); docs = []
+    pages = discover_index_pages()
+    # Limita a descoberta às páginas de 2025 em diante
+    pages = [
+        pg for pg in pages
+        if int(pg.get("ano", 0) or 0) >= 2025
+    ]
+    docs = []
     for pg in pages:
         print(f'[PÁGINA] {pg["orgao"]} {pg["ano"]}: {pg["pagina"]}')
         links, _ = links_from_page(pg["pagina"])
