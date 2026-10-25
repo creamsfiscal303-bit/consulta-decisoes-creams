@@ -165,9 +165,16 @@ def load_existing():
 def main():
     existing = load_existing()
     old_urls = set(existing["url_documento"].astype(str)) if not existing.empty and "url_documento" in existing.columns else set()
-    records, pages = discover_pdf_records()
-    print(f"[INFO] Páginas anuais: {len(pages)}; PDFs encontrados: {len(records)}")
-    new_records = [d for d in records if d["url_documento"] not in old_urls]
+records, pages = discover_pdf_records()
+# Considerar somente documentos de 2025 em diante
+records = [d for d in records if int(d.get("ano", 0) or 0) >= 2025]
+pages = [p for p in pages if int(p.get("ano", 0) or 0) >= 2025]
+print(f"[INFO] Páginas anuais a partir de 2025: {len(pages)}")
+print(f"[INFO] PDFs encontrados a partir de 2025: {len(records)}")
+new_records = [
+    d for d in records
+    if d["url_documento"] not in old_urls
+]
     print(f"[INFO] Já cadastrados: {len(old_urls)}; novos para processar: {len(new_records)}")
     new_docs = []
     for i, d in enumerate(new_records, 1):
