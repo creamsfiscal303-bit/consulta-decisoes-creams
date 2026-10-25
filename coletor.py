@@ -55,21 +55,47 @@ def links_from_page(url):
         found.append((label, href))
     return list(dict.fromkeys(found)), title
 
+
 def discover_index_pages():
-    """Descobre páginas anuais disponíveis sem limitar a 2025/2026."""
+    """Descobre páginas anuais disponíveis a partir de 2025."""
     found = []
+
     for index_url in (COLEGIADOS, PLENARIO):
         links, _ = links_from_page(index_url)
+
         for label, url in links:
             m = re.search(r"\b(20\d{2})\b", label)
             low = label.casefold()
-            if not m or not any(x in low for x in ("decis", "plenari", "plenári")): continue
+
+            if not m or not any(
+                x in low for x in ("decis", "plenari", "plenári")
+            ):
+                continue
+
             year = int(m.group(1))
+
+            # Ignora páginas anteriores a 2025
+            if year < 2025:
+                continue
+
             om = re.search(r"\b(CEA|CEECA|CEEEM|CEEST)\b", label, re.I)
-            organ = "Plenário" if ("plenari" in low or "plenári" in low) else (om.group(1).upper() if om else "Câmara/Colegiado")
-            found.append({"orgao": organ, "ano": year, "pagina": url, "rotulo": label})
+
+            organ = (
+                "Plenário"
+                if ("plenari" in low or "plenári" in low)
+                else (om.group(1).upper() if om else "Câmara/Colegiado")
+            )
+
+            found.append({
+                "orgao": organ,
+                "ano": year,
+                "pagina": url,
+                "rotulo": label,
+            })
+
     unique = {item["pagina"]: item for item in found}
     return list(unique.values())
+
 
 def discover_pdf_records():
     pages = discover_index_pages(); docs = []
