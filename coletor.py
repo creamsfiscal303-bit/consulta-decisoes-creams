@@ -186,44 +186,137 @@ def load_existing():
     print("[INFO] Base anterior não encontrada; será criada nova.")
     return pd.DataFrame()
 
+
 def main():
     existing = load_existing()
-    old_urls = set(existing["url_documento"].astype(str)) if not existing.empty and "url_documento" in existing.columns else set()
-records, pages = discover_pdf_records()
-# Considerar somente documentos de 2025 em diante
-records = [d for d in records if int(d.get("ano", 0) or 0) >= 2025]
-pages = [p for p in pages if int(p.get("ano", 0) or 0) >= 2025]
-print(f"[INFO] Páginas anuais a partir de 2025: {len(pages)}")
-print(f"[INFO] PDFs encontrados a partir de 2025: {len(records)}")
-new_records = [
-    d for d in records
-    if d["url_documento"] not in old_urls
-]
-    print(f"[INFO] Já cadastrados: {len(old_urls)}; novos para processar: {len(new_records)}")
+
+    old_urls = (
+        set(existing["url_documento"].astype(str))
+        if not existing.empty and "url_documento" in existing.columns
+        else set()
+    )
+
+    records, pages = discover_pdf_records()
+
+    # Garantia adicional: somente documentos de 2025 em diante
+    records = [
+        d for d in records
+        if int(d.get("ano", 0) or 0) >= 2025
+    ]
+
+    pages = [
+        p for p in pages
+        if int(p.get("ano", 0) or 0) >= 2025
+    ]
+
+    print(f"[INFO] Páginas anuais a partir de 2025: {len(pages)}")
+    print(f"[INFO] PDFs encontrados a partir de 2025: {len(records)}")
+
+    new_records = [
+        d for d in records
+        if d["url_documento"] not in old_urls
+    ]
+
+    print(
+        f"[INFO] Já cadastrados: {len(old_urls)}; "
+        f"novos para processar: {len(new_records)}"
+    )
+
     new_docs = []
+
     for i, d in enumerate(new_records, 1):
-        print(f'[PDF {i}/{len(new_records)}] {d["titulo_documento"]}')
-        r = get(d["url_documento"]); data = b""; path = ""; txt = ""
-        if r and (r.content[:4] == b"%PDF" or "pdf" in r.headers.get("content-type", "").lower()):
-            data = r.content; path = save_pdf(d["url_documento"], data); txt = pdf_text(data)
-        status = "Texto extraído" if txt else ("PDF sem texto extraível/OCR necessário" if data else "Falha no download")
+        print(
+            f'[PDF {i}/{len(new_records)}] '
+            f'{d["titulo_documento"]}'
+        )
+
+        r = get(d["url_documento"])
+        data = b""
+        path = ""
+        txt = ""
+
+        if r and (
+            r.content[:4] == b"%PDF"
+            or "pdf" in r.headers.get("content-type", "").lower()
+        ):
+            data = r.content
+            path = save_pdf(d["url_documento"], data)
+            txt = pdf_text(data)
+
+        status = (
+            "Texto extraído"
+            if txt
+            else (
+                "PDF sem texto extraível/OCR necessário"
+                if data
+                else "Falha no download"
+            )
+        )
+
         category, terms = classify(txt)
-        d.update({"texto_extraido": txt[:150000], "arquivo_local": path, "status_extracao": status,
-            "triagem_automatica": category, "termos_encontrados": terms,
-            "trecho_relevante": snippet(txt, terms.split("; ") if terms else TERMS),
-            "hash_conteudo": hashlib.sha256(data).hexdigest() if data else ""})
-        new_docs.append(d); time.sleep(0.1)
+
+        d.update({
+            "texto_extraido": txt[:150000],
+            "arquivo_local": path,
+            "status_extracao": status,
+            "triagem_automatica": category,
+            "termos_encontrados": terms,
+            "trecho_relevante": snippet(
+                txt,
+                terms.split("; ") if terms else TERMS
+            ),
+            "hash_conteudo": (
+                hashlib.sha256(data).hexdigest() if data else ""
+            ),
+        })
+
+        new_docs.append(d)
+        time.sleep(0.1)
+
     new_df = pd.DataFrame(new_docs)
-    if existing.empty: combined = new_df
-    elif new_df.empty: combined = existing
-    else: combined = pd.concat([existing, new_df], ignore_index=True, sort=False)
+
+    if existing.empty:
+        combined = new_df
+    elif new_df.empty:
+        combined = existing
+    else:
+        combined = pd.concat(
+            [existing, new_df],
+            ignore_index=True,
+            sort=False
+        )
+
     if not combined.empty and "url_documento" in combined.columns:
-        combined = combined.drop_duplicates(subset=["url_documento"], keep="last")
-    combined.to_csv(DB_GZ, index=False, encoding="utf-8-sig", compression={"method": "gzip", "mtime": 0})
-    pd.DataFrame(pages).to_csv(OUT / "fontes_anuais.csv", index=False, encoding="utf-8-sig")
-    print(f"[OK] Total na base: {len(combined)}; novos nesta execução: {len(new_docs)}")
-    print(f"[OK] Base compactada: {DB_GZ} ({DB_GZ.stat().st_size / (1024*1024):.2f} MB)")
-    print("[INFO] O CSV original não foi alterado; triagem automática exige conferência oficial.")
+        combined = combined.drop_duplicates(
+            subset=["url_documento"],
+            keep="last"
+        )
+
+    combined.to_csv(
+        DB_GZ,
+        index=False,
+        encoding="utf-8-sig",
+        compression={"method": "gzip", "mtime": 0}
+    )
+
+    pd.DataFrame(pages).to_csv(
+        OUT / "fontes_anuais.csv",
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    print(
+        f"[OK] Total na base: {len(combined)}; "
+        f"novos nesta execução: {len(new_docs)}"
+    )
+    print(
+        f"[OK] Base compactada: {DB_GZ} "
+        f"({DB_GZ.stat().st_size / (1024*1024):.2f} MB)"
+    )
+    print(
+        "[INFO] A base histórica foi preservada; "
+        "a triagem automática exige conferência do documento oficial."
+    )
 
 if __name__ == "__main__":
     main()
